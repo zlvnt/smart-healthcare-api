@@ -1,0 +1,903 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Smart Healthcare System API",
+        "version": "1.0.0",
+        "description": "API documentation for Smart Healthcare System - UTS IAE/Web Service Development",
+        "contact": {
+            "name": "Healthcare Team"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:3000",
+            "description": "Development server (API Gateway)"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Patients",
+            "description": "Patient management endpoints"
+        },
+        {
+            "name": "Doctors",
+            "description": "Doctor management endpoints"
+        },
+        {
+            "name": "Appointments",
+            "description": "Appointment management endpoints"
+        },
+        {
+            "name": "Medical Records",
+            "description": "Medical record management endpoints"
+        }
+    ],
+    "components": {
+        "schemas": {
+            "Patient": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "birth_date",
+                    "gender",
+                    "phone"
+                ],
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "description": "Auto-generated patient ID"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Patient full name",
+                        "example": "John Doe"
+                    },
+                    "birth_date": {
+                        "type": "string",
+                        "description": "Birth date in YYYY-MM-DD format",
+                        "example": "1990-05-15"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "male",
+                            "female"
+                        ],
+                        "description": "Patient gender",
+                        "example": "male"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Phone number",
+                        "example": "081234567890"
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "Full address",
+                        "example": "Jl. Merdeka No. 123, Jakarta"
+                    },
+                    "blood_type": {
+                        "type": "string",
+                        "enum": [
+                            "O+",
+                            "A+",
+                            "B+",
+                            "AB+",
+                            "O-",
+                            "A-",
+                            "B-",
+                            "AB-"
+                        ],
+                        "description": "Blood type",
+                        "example": "A+"
+                    }
+                }
+            },
+            "Doctor": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "specialization",
+                    "phone"
+                ],
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "description": "Auto-generated doctor ID"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Doctor name with title",
+                        "example": "Dr. Jane Smith, Sp.PD"
+                    },
+                    "specialization": {
+                        "type": "string",
+                        "description": "Medical specialization",
+                        "example": "Cardiologist"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Phone number",
+                        "example": "081234567891"
+                    },
+                    "schedule": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Practice schedule",
+                        "example": [
+                            "Monday 09:00-12:00",
+                            "Wednesday 14:00-17:00"
+                        ]
+                    }
+                }
+            },
+            "Appointment": {
+                "type": "object",
+                "required": [
+                    "patient_id",
+                    "doctor_id",
+                    "appointment_date"
+                ],
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "description": "Auto-generated appointment ID"
+                    },
+                    "patient_id": {
+                        "type": "string",
+                        "description": "Reference to patient ID",
+                        "example": "507f1f77bcf86cd799439011"
+                    },
+                    "doctor_id": {
+                        "type": "string",
+                        "description": "Reference to doctor ID",
+                        "example": "507f1f77bcf86cd799439012"
+                    },
+                    "appointment_date": {
+                        "type": "string",
+                        "description": "Appointment date and time in YYYY-MM-DD HH:mm format",
+                        "example": "2024-11-15 10:00"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "confirmed",
+                            "completed",
+                            "cancelled"
+                        ],
+                        "description": "Appointment status",
+                        "example": "pending"
+                    },
+                    "complaint": {
+                        "type": "string",
+                        "description": "Patient complaint",
+                        "example": "Chest pain and shortness of breath"
+                    }
+                }
+            },
+            "MedicalRecord": {
+                "type": "object",
+                "required": [
+                    "patient_id",
+                    "doctor_id",
+                    "diagnosis"
+                ],
+                "properties": {
+                    "_id": {
+                        "type": "string",
+                        "description": "Auto-generated record ID"
+                    },
+                    "patient_id": {
+                        "type": "string",
+                        "description": "Reference to patient ID",
+                        "example": "507f1f77bcf86cd799439011"
+                    },
+                    "doctor_id": {
+                        "type": "string",
+                        "description": "Reference to doctor ID",
+                        "example": "507f1f77bcf86cd799439012"
+                    },
+                    "appointment_id": {
+                        "type": "string",
+                        "description": "Reference to appointment ID (optional)",
+                        "example": "507f1f77bcf86cd799439013"
+                    },
+                    "diagnosis": {
+                        "type": "string",
+                        "description": "Medical diagnosis",
+                        "example": "Acute coronary syndrome"
+                    },
+                    "prescription": {
+                        "type": "string",
+                        "description": "Prescribed medication",
+                        "example": "Aspirin 100mg once daily, Atorvastatin 20mg once daily"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Additional notes",
+                        "example": "Patient advised to rest and follow up in 2 weeks"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Record creation date"
+                    }
+                }
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Error message"
+                    },
+                    "error": {
+                        "type": "string",
+                        "example": "Detailed error description"
+                    }
+                }
+            },
+            "Success": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operation successful"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                }
+            }
+        }
+    },
+    "paths": {
+        "/api/patients": {
+            "get": {
+                "summary": "Get all patients",
+                "tags": [
+                    "Patients"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of all patients",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Patient"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create new patient",
+                "tags": [
+                    "Patients"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "name",
+                                    "birth_date",
+                                    "gender",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "birth_date": {
+                                        "type": "string",
+                                        "example": "1990-05-15"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "example": "male"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "081234567890"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "Jl. Merdeka No. 123, Jakarta"
+                                    },
+                                    "blood_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "O+",
+                                            "A+",
+                                            "B+",
+                                            "AB+",
+                                            "O-",
+                                            "A-",
+                                            "B-",
+                                            "AB-"
+                                        ],
+                                        "example": "A+"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Patient created successfully"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/patients/{id}": {
+            "get": {
+                "summary": "Get patient by ID",
+                "tags": [
+                    "Patients"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Patient ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Patient not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "Update patient",
+                "tags": [
+                    "Patients"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Patient ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "birth_date": {
+                                        "type": "string"
+                                    },
+                                    "gender": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "blood_type": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient updated successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete patient",
+                "tags": [
+                    "Patients"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Patient ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient deleted successfully"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                }
+            }
+        },
+        "/api/doctors": {
+            "get": {
+                "summary": "Get all doctors",
+                "tags": [
+                    "Doctors"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of all doctors"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create new doctor",
+                "tags": [
+                    "Doctors"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "name",
+                                    "specialization",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Dr. Jane Smith, Sp.PD"
+                                    },
+                                    "specialization": {
+                                        "type": "string",
+                                        "example": "Cardiologist"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "081234567891"
+                                    },
+                                    "schedule": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Monday 09:00-12:00",
+                                            "Wednesday 14:00-17:00"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Doctor created successfully"
+                    }
+                }
+            }
+        },
+        "/api/doctors/{id}": {
+            "get": {
+                "summary": "Get doctor by ID",
+                "tags": [
+                    "Doctors"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Doctor ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Doctor details"
+                    },
+                    "404": {
+                        "description": "Doctor not found"
+                    }
+                }
+            },
+            "put": {
+                "summary": "Update doctor",
+                "tags": [
+                    "Doctors"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Doctor updated successfully"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete doctor",
+                "tags": [
+                    "Doctors"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Doctor deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/appointments": {
+            "get": {
+                "summary": "Get all appointments",
+                "tags": [
+                    "Appointments"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of all appointments"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create new appointment",
+                "description": "Creates a new appointment with validation against Patient and Doctor services",
+                "tags": [
+                    "Appointments"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "patient_id",
+                                    "doctor_id",
+                                    "appointment_date"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "string",
+                                        "example": "507f1f77bcf86cd799439011"
+                                    },
+                                    "doctor_id": {
+                                        "type": "string",
+                                        "example": "507f1f77bcf86cd799439012"
+                                    },
+                                    "appointment_date": {
+                                        "type": "string",
+                                        "example": "2024-11-15 10:00"
+                                    },
+                                    "complaint": {
+                                        "type": "string",
+                                        "example": "Chest pain and shortness of breath"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Appointment created successfully"
+                    },
+                    "404": {
+                        "description": "Patient or Doctor not found"
+                    }
+                }
+            }
+        },
+        "/api/appointments/{id}": {
+            "get": {
+                "summary": "Get appointment by ID",
+                "tags": [
+                    "Appointments"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Appointment details"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete appointment",
+                "tags": [
+                    "Appointments"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Appointment deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/appointments/{id}/status": {
+            "put": {
+                "summary": "Update appointment status",
+                "tags": [
+                    "Appointments"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "confirmed",
+                                            "completed",
+                                            "cancelled"
+                                        ],
+                                        "example": "confirmed"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated successfully"
+                    }
+                }
+            }
+        },
+        "/api/records": {
+            "get": {
+                "summary": "Get all medical records",
+                "tags": [
+                    "Medical Records"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of all medical records"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create new medical record",
+                "description": "Creates a new medical record with validation against Patient, Doctor, and optionally Appointment services",
+                "tags": [
+                    "Medical Records"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "patient_id",
+                                    "doctor_id",
+                                    "diagnosis"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "string",
+                                        "example": "507f1f77bcf86cd799439011"
+                                    },
+                                    "doctor_id": {
+                                        "type": "string",
+                                        "example": "507f1f77bcf86cd799439012"
+                                    },
+                                    "appointment_id": {
+                                        "type": "string",
+                                        "example": "507f1f77bcf86cd799439013"
+                                    },
+                                    "diagnosis": {
+                                        "type": "string",
+                                        "example": "Acute coronary syndrome"
+                                    },
+                                    "prescription": {
+                                        "type": "string",
+                                        "example": "Aspirin 100mg once daily, Atorvastatin 20mg once daily"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Patient advised to rest and follow up in 2 weeks"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Medical record created successfully"
+                    },
+                    "404": {
+                        "description": "Patient, Doctor, or Appointment not found"
+                    }
+                }
+            }
+        },
+        "/api/records/{id}": {
+            "get": {
+                "summary": "Get medical record by ID",
+                "tags": [
+                    "Medical Records"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Medical record details"
+                    }
+                }
+            }
+        },
+        "/api/records/patient/{patientId}": {
+            "get": {
+                "summary": "Get medical records by patient ID",
+                "tags": [
+                    "Medical Records"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "patientId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Patient ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of patient's medical records"
+                    }
+                }
+            }
+        }
+    }
+}

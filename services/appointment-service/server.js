@@ -9,22 +9,19 @@ const Appointment = require('./models/Appointment');
 const app = express();
 const PORT = process.env.APPOINTMENT_PORT || 3003;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
   dbName: process.env.DB_NAME || 'healthcare_db'
 })
-  .then(() => console.log('✅ Appointment Service connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => console.log('Appointment Service connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-// Service URLs
 const PATIENT_SERVICE_URL = `http://localhost:${process.env.PATIENT_PORT || 3001}`;
 const DOCTOR_SERVICE_URL = `http://localhost:${process.env.DOCTOR_PORT || 3002}`;
 
-// Helper function to validate patient
+// validate patient
 async function validatePatient(patientId) {
   try {
     const response = await axios.get(`${PATIENT_SERVICE_URL}/patients/${patientId}`);
@@ -37,7 +34,7 @@ async function validatePatient(patientId) {
   }
 }
 
-// Helper function to validate doctor
+// validate doctor
 async function validateDoctor(doctorId) {
   try {
     const response = await axios.get(`${DOCTOR_SERVICE_URL}/doctors/${doctorId}`);
@@ -49,8 +46,6 @@ async function validateDoctor(doctorId) {
     throw error;
   }
 }
-
-// Routes
 
 // GET all appointments
 app.get('/appointments', async (req, res) => {
@@ -208,7 +203,6 @@ app.delete('/appointments/:id', async (req, res) => {
   }
 });
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({
     service: 'Appointment Service',
@@ -218,5 +212,5 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Appointment Service running on port ${PORT}`);
+  console.log(`Appointment Service running on port ${PORT}`);
 });

@@ -8,26 +8,21 @@ require('dotenv').config({ path: '../.env' });
 const app = express();
 const PORT = process.env.GATEWAY_PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
-
-// Service URLs
 const PATIENT_SERVICE_URL = `http://localhost:${process.env.PATIENT_PORT || 3001}`;
 const DOCTOR_SERVICE_URL = `http://localhost:${process.env.DOCTOR_PORT || 3002}`;
 const APPOINTMENT_SERVICE_URL = `http://localhost:${process.env.APPOINTMENT_PORT || 3003}`;
 const MEDICAL_RECORD_SERVICE_URL = `http://localhost:${process.env.MEDICAL_RECORD_PORT || 3004}`;
 
-// Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Swagger JSON endpoint
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
-// ===== PATIENT SERVICE ROUTES =====
+// Patient Service routes
 
 /**
  * @swagger
@@ -245,7 +240,7 @@ app.delete('/api/patients/:id', async (req, res) => {
   }
 });
 
-// ===== DOCTOR SERVICE ROUTES =====
+// Doctor Service routes
 
 /**
  * @swagger
@@ -414,7 +409,7 @@ app.delete('/api/doctors/:id', async (req, res) => {
   }
 });
 
-// ===== APPOINTMENT SERVICE ROUTES =====
+// Appointment Service routes
 
 /**
  * @swagger
@@ -588,7 +583,7 @@ app.delete('/api/appointments/:id', async (req, res) => {
   }
 });
 
-// ===== MEDICAL RECORD SERVICE ROUTES =====
+// Medical Record Service routes
 
 /**
  * @swagger
@@ -743,7 +738,7 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 API Gateway running on port ${PORT}`);
-  console.log(`📚 Swagger UI: http://localhost:${PORT}/api-docs`);
-  console.log(`📄 OpenAPI JSON: http://localhost:${PORT}/api-docs.json`);
+  console.log(`API Gateway running on port ${PORT}`);
+  console.log(`Swagger UI: http://localhost:${PORT}/api-docs`);
+  console.log(`OpenAPI JSON: http://localhost:${PORT}/api-docs.json`);
 });

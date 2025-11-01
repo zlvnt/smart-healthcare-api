@@ -8,18 +8,14 @@ const Doctor = require('./models/Doctor');
 const app = express();
 const PORT = process.env.DOCTOR_PORT || 3002;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
   dbName: process.env.DB_NAME || 'healthcare_db'
 })
-  .then(() => console.log('✅ Doctor Service connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
-
-// Routes
+  .then(() => console.log('Doctor Service connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // GET all doctors
 app.get('/doctors', async (req, res) => {
@@ -150,7 +146,6 @@ app.delete('/doctors/:id', async (req, res) => {
   }
 });
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({
     service: 'Doctor Service',
@@ -160,5 +155,5 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Doctor Service running on port ${PORT}`);
+  console.log(`Doctor Service running on port ${PORT}`);
 });
