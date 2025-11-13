@@ -1,558 +1,725 @@
-// API Gateway Base URL
-const API_BASE_URL = 'http://localhost:3000/api';
+/* ------------------------------
+  Smart Healthcare — Frontend JS
+  Pure JS, connects to API_BASE_URL
+-------------------------------*/
+const API_BASE_URL = 'http://localhost:3000/api'; // <- pastikan backend berjalan di sini
 
-// Global data storage
+// Cached DOM
+const navItems = document.querySelectorAll('.nav-item');
+const sections = document.querySelectorAll('.section');
+const noti = document.getElementById('notification');
+
+// Tables & loading
+const patientsTbody = document.getElementById('patients-tbody');
+const doctorsTbody = document.getElementById('doctors-tbody');
+const appointmentsTbody = document.getElementById('appointments-tbody');
+const recordsTbody = document.getElementById('records-tbody');
+
+const patientsLoading = document.getElementById('patients-loading');
+const doctorsLoading = document.getElementById('doctors-loading');
+const appointmentsLoading = document.getElementById('appointments-loading');
+const recordsLoading = document.getElementById('records-loading');
+
+// Cards
+const cardPatients = document.getElementById('cardPatients');
+const cardDoctors = document.getElementById('cardDoctors');
+const cardAppointments = document.getElementById('cardAppointments');
+
+// Modal forms
+const modalPatient = document.getElementById('modalPatient');
+const modalDoctor = document.getElementById('modalDoctor');
+const modalAppointment = document.getElementById('modalAppointment');
+const modalRecord = document.getElementById('modalRecord');
+
+const formPatient = document.getElementById('formPatient');
+const formDoctor = document.getElementById('formDoctor');
+const formAppointment = document.getElementById('formAppointment');
+const formRecord = document.getElementById('formRecord');
+
+// Form Hidden IDs
+const patientIdInput = document.getElementById('patient-id');
+const doctorIdInput = document.getElementById('doctor-id');
+const appointmentIdInput = document.getElementById('appointment-id');
+
+// Dropdowns inside modals
+const appointmentPatientSelect = document.getElementById('appointment-patient');
+const appointmentDoctorSelect = document.getElementById('appointment-doctor');
+const recordPatientSelect = document.getElementById('record-patient');
+const recordDoctorSelect = document.getElementById('record-doctor');
+const recordAppointmentSelect = document.getElementById('record-appointment');
+// Tambahkan untuk Status Appointment
+const appointmentStatusSelect = document.getElementById('appointment-status');
+
+// Global state cache
 let patients = [];
 let doctors = [];
 let appointments = [];
 let records = [];
 
-// ===== INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', () => {
-    setupTabNavigation();
-    loadPatients();
+/* ------------------------------
+  Helper utilities
+-------------------------------*/
+function showNotification(message, type = 'success') {
+  noti.className = 'notification';
+  if (type === 'error') noti.classList.add('error');
+  noti.textContent = message;
+  noti.classList.remove('hidden');
+  setTimeout(() => noti.classList.add('hidden'), 3500);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  
+  const pad = (n) => n.toString().padStart(2, '0');
+  
+  try {
+    const isDateOnly = dateStr.length === 10 && dateStr.includes('-'); // YYYY-MM-DD
+    if (isDateOnly) return dateStr; 
+    
+    // Format ke YYYY-MM-DDTHH:MM
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch (e) {
+    return d.toLocaleString(); // Fallback
+  }
+}
+
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleString();
+}
+
+function closeModalById(id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.remove('show');
+}
+
+/* ------------------------------
+  NAV & SECTION SWITCH
+-------------------------------*/
+navItems.forEach(btn => btn.addEventListener('click', () => {
+  navItems.forEach(n => n.classList.remove('active'));
+  btn.classList.add('active');
+
+  const sectionId = btn.dataset.section;
+  sections.forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(sectionId);
+  if (target) target.classList.add('active');
+
+  if (sectionId === 'patients') loadPatients();
+  if (sectionId === 'doctors') loadDoctors();
+  if (sectionId === 'appointments') loadAppointments();
+  if (sectionId === 'records') loadMedicalRecords();
+}));
+
+/* ------------------------------
+  MODAL MANAGEMENT (open/close/setup for Edit)
+-------------------------------*/
+function openModal(modalEl, isEdit = false, title = 'Add') { 
+  if (modalEl === modalPatient) document.getElementById('modalPatientTitle').textContent = isEdit ? 'Edit Patient' : 'Add Patient';
+  if (modalEl === modalDoctor) document.getElementById('modalDoctorTitle').textContent = isEdit ? 'Edit Doctor' : 'Add Doctor';
+  if (modalEl === modalAppointment) document.getElementById('modalAppointmentTitle').textContent = isEdit ? 'Edit Appointment' : 'Create Appointment';
+  modalEl.classList.add('show'); 
+}
+
+function closeModal(modalEl) { 
+  modalEl.classList.remove('show'); 
+}
+
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const id = btn.dataset.close;
+    closeModalById(id);
+  });
 });
 
-// ===== TAB NAVIGATION =====
-function setupTabNavigation() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabName = btn.getAttribute('data-tab');
-            switchTab(tabName);
-        });
-    });
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', (ev) => {
+    if (ev.target === m) m.classList.remove('show');
+  });
+});
+
+function setupEditPatientModal(patient) {
+  formPatient.reset();
+  patientIdInput.value = patient._id;
+  document.getElementById('patient-name').value = patient.name || '';
+  document.getElementById('patient-birthdate').value = patient.birth_date ? patient.birth_date.split('T')[0] : '';
+  document.getElementById('patient-gender').value = patient.gender || '';
+  document.getElementById('patient-phone').value = patient.phone || '';
+  document.getElementById('patient-address').value = patient.address || '';
+  document.getElementById('patient-bloodtype').value = patient.blood_type || '';
+  openModal(modalPatient, true);
 }
 
-function switchTab(tabName) {
-    // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-    // Update tab content
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-
-    // Load data for the active tab
-    if (tabName === 'patients') loadPatients();
-    if (tabName === 'doctors') loadDoctors();
-    if (tabName === 'appointments') loadAppointments();
-    if (tabName === 'records') loadMedicalRecords();
+function setupEditDoctorModal(doctor) {
+  formDoctor.reset();
+  doctorIdInput.value = doctor._id;
+  document.getElementById('doctor-name').value = doctor.name || '';
+  document.getElementById('doctor-specialization').value = doctor.specialization || '';
+  document.getElementById('doctor-phone').value = doctor.phone || '';
+  document.getElementById('doctor-schedule').value = Array.isArray(doctor.schedule) ? doctor.schedule.join('\n') : (doctor.schedule || '');
+  openModal(modalDoctor, true);
 }
 
-// ===== NOTIFICATION =====
-function showNotification(message, type = 'success') {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.className = `notification ${type}`;
-
-    setTimeout(() => {
-        notification.classList.add('hidden');
-    }, 3000);
+async function setupEditAppointmentModal(appointment) {
+  await populateDropdowns(); 
+  formAppointment.reset();
+  appointmentIdInput.value = appointment._id;
+  appointmentPatientSelect.value = appointment.patient_id || '';
+  appointmentDoctorSelect.value = appointment.doctor_id || '';
+  appointmentStatusSelect.value = appointment.status || 'pending';
+  document.getElementById('appointment-datetime').value = appointment.appointment_date ? formatDate(appointment.appointment_date) : '';
+  document.getElementById('appointment-complaint').value = appointment.complaint || '';
+  openModal(modalAppointment, true);
 }
 
-// ===== PATIENTS =====
+/* ------------------------------
+  LOAD & RENDER FUNCTIONS
+-------------------------------*/
+async function loadOverviewCounts() {
+  try {
+    const [pResp, dResp, aResp] = await Promise.all([
+      fetch(`${API_BASE_URL}/patients`),
+      fetch(`${API_BASE_URL}/doctors`),
+      fetch(`${API_BASE_URL}/appointments/today`).catch(()=>null) 
+    ]);
+
+    const pData = await pResp.json();
+    const dData = await dResp.json();
+    let aData = null;
+    if (aResp && aResp.ok) aData = await aResp.json();
+
+    patients = (pData && pData.success) ? pData.data : [];
+    doctors = (dData && dData.success) ? dData.data : [];
+
+    let todayCount = 0;
+    try {
+      if (aData && aData.success) {
+        todayCount = Array.isArray(aData.data) ? aData.data.length : 0;
+      } else {
+        const aAllResp = await fetch(`${API_BASE_URL}/appointments`);
+        const aAllData = await aAllResp.json();
+        if (aAllData && aAllData.success) {
+          appointments = aAllData.data;
+          const today = new Date().toDateString();
+          todayCount = appointments.filter(ap => new Date(ap.appointment_date).toDateString() === today).length;
+        }
+      }
+    } catch(e) { todayCount = 0; }
+
+    cardPatients.textContent = patients.length;
+    cardDoctors.textContent = doctors.length;
+    cardAppointments.textContent = todayCount;
+  } catch (err) {
+    console.error('Error loading overview:', err);
+    showNotification('Failed loading overview', 'error');
+  }
+}
+
+/* ---------- PATIENTS ---------- */
 async function loadPatients() {
-    const loading = document.getElementById('patients-loading');
-    const table = document.getElementById('patients-table');
-    const tbody = document.getElementById('patients-tbody');
+  patientsLoading.classList.remove('hidden');
+  document.getElementById('patients-table').classList.add('hidden');
 
-    loading.classList.remove('hidden');
-    table.classList.add('hidden');
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/patients`);
-        const data = await response.json();
-
-        if (data.success) {
-            patients = data.data;
-            tbody.innerHTML = '';
-
-            patients.forEach(patient => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${patient.name}</td>
-                    <td>${patient.birth_date}</td>
-                    <td>${patient.gender}</td>
-                    <td>${patient.phone}</td>
-                    <td>${patient.blood_type || '-'}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="deletePatient('${patient._id}')">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error('Error loading patients:', error);
-        loading.textContent = 'Error loading patients';
-        showNotification('Error loading patients', 'error');
+  try {
+    const res = await fetch(`${API_BASE_URL}/patients`);
+    const data = await res.json();
+    if (data.success) {
+      patients = data.data;
+      renderPatientsTable();
+    } else {
+      patientsTbody.innerHTML = `<tr><td colspan="6">No data</td></tr>`;
     }
+  } catch (err) {
+    console.error(err);
+    showNotification('Error loading patients', 'error');
+    patientsTbody.innerHTML = `<tr><td colspan="6">Error</td></tr>`;
+  } finally {
+    patientsLoading.classList.add('hidden');
+    document.getElementById('patients-table').classList.remove('hidden');
+    loadOverviewCounts();
+  }
 }
 
-function showAddPatientForm() {
-    document.getElementById('add-patient-form').classList.remove('hidden');
+function renderPatientsTable() {
+  patientsTbody.innerHTML = '';
+  if (!patients || patients.length === 0) {
+    patientsTbody.innerHTML = `<tr><td colspan="6">No patients found</td></tr>`;
+    return;
+  }
+  patients.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p.name}</td>
+      <td>${p.birth_date ? p.birth_date.split('T')[0] : '-'}</td>
+      <td>${p.gender || '-'}</td>
+      <td>${p.phone || '-'}</td>
+      <td>${p.blood_type || '-'}</td>
+      <td>
+        <button class="small-btn edit-btn" data-edit-patient="${p._id}">Edit</button>
+        <button class="small-btn delete-btn" data-delete-patient="${p._id}">Delete</button>
+      </td>
+    `;
+    patientsTbody.appendChild(tr);
+  });
 }
 
-function hideAddPatientForm() {
-    document.getElementById('add-patient-form').classList.add('hidden');
-    document.querySelector('#add-patient-form form').reset();
-}
-
-async function addPatient(event) {
-    event.preventDefault();
-
-    const patientData = {
-        name: document.getElementById('patient-name').value,
-        birth_date: document.getElementById('patient-birthdate').value,
-        gender: document.getElementById('patient-gender').value,
-        phone: document.getElementById('patient-phone').value,
-        address: document.getElementById('patient-address').value,
-        blood_type: document.getElementById('patient-bloodtype').value
-    };
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/patients`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(patientData)
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Patient added successfully!');
-            hideAddPatientForm();
-            loadPatients();
-        } else {
-            showNotification(data.message || 'Error adding patient', 'error');
-        }
-    } catch (error) {
-        console.error('Error adding patient:', error);
-        showNotification('Error adding patient', 'error');
-    }
-}
-
-async function deletePatient(id) {
-    if (!confirm('Are you sure you want to delete this patient?')) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/patients/${id}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Patient deleted successfully!');
-            loadPatients();
-        } else {
-            showNotification(data.message || 'Error deleting patient', 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting patient:', error);
-        showNotification('Error deleting patient', 'error');
-    }
-}
-
-// ===== DOCTORS =====
+/* ---------- DOCTORS ---------- */
 async function loadDoctors() {
-    const loading = document.getElementById('doctors-loading');
-    const table = document.getElementById('doctors-table');
-    const tbody = document.getElementById('doctors-tbody');
+  doctorsLoading.classList.remove('hidden');
+  document.getElementById('doctors-table').classList.add('hidden');
 
-    loading.classList.remove('hidden');
-    table.classList.add('hidden');
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/doctors`);
-        const data = await response.json();
-
-        if (data.success) {
-            doctors = data.data;
-            tbody.innerHTML = '';
-
-            doctors.forEach(doctor => {
-                const row = document.createElement('tr');
-                const scheduleDisplay = doctor.schedule && doctor.schedule.length > 0
-                    ? doctor.schedule.join('<br>')
-                    : '-';
-
-                row.innerHTML = `
-                    <td>${doctor.name}</td>
-                    <td>${doctor.specialization}</td>
-                    <td>${doctor.phone}</td>
-                    <td>${scheduleDisplay}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="deleteDoctor('${doctor._id}')">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error('Error loading doctors:', error);
-        loading.textContent = 'Error loading doctors';
-        showNotification('Error loading doctors', 'error');
+  try {
+    const res = await fetch(`${API_BASE_URL}/doctors`);
+    const data = await res.json();
+    if (data.success) {
+      doctors = data.data;
+      renderDoctorsTable();
+    } else {
+      doctorsTbody.innerHTML = `<tr><td colspan="5">No data</td></tr>`;
     }
+  } catch (err) {
+    console.error(err);
+    showNotification('Error loading doctors', 'error');
+    doctorsTbody.innerHTML = `<tr><td colspan="5">Error</td></tr>`;
+  } finally {
+    doctorsLoading.classList.add('hidden');
+    document.getElementById('doctors-table').classList.remove('hidden');
+    loadOverviewCounts();
+  }
 }
 
-function showAddDoctorForm() {
-    document.getElementById('add-doctor-form').classList.remove('hidden');
+function renderDoctorsTable() {
+  doctorsTbody.innerHTML = '';
+  if (!doctors || doctors.length === 0) {
+    doctorsTbody.innerHTML = `<tr><td colspan="5">No doctors found</td></tr>`;
+    return;
+  }
+  doctors.forEach(d => {
+    const schedule = Array.isArray(d.schedule) ? d.schedule.join('<br>') : (d.schedule || '-');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.name}</td>
+      <td>${d.specialization}</td>
+      <td>${d.phone}</td>
+      <td>${schedule}</td>
+      <td>
+        <button class="small-btn edit-btn" data-edit-doctor="${d._id}">Edit</button>
+        <button class="small-btn delete-btn" data-delete-doctor="${d._id}">Delete</button>
+      </td>
+    `;
+    doctorsTbody.appendChild(tr);
+  });
 }
 
-function hideAddDoctorForm() {
-    document.getElementById('add-doctor-form').classList.add('hidden');
-    document.querySelector('#add-doctor-form form').reset();
-}
-
-async function addDoctor(event) {
-    event.preventDefault();
-
-    const scheduleText = document.getElementById('doctor-schedule').value;
-    const scheduleArray = scheduleText
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-
-    const doctorData = {
-        name: document.getElementById('doctor-name').value,
-        specialization: document.getElementById('doctor-specialization').value,
-        phone: document.getElementById('doctor-phone').value,
-        schedule: scheduleArray
-    };
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/doctors`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(doctorData)
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Doctor added successfully!');
-            hideAddDoctorForm();
-            loadDoctors();
-        } else {
-            showNotification(data.message || 'Error adding doctor', 'error');
-        }
-    } catch (error) {
-        console.error('Error adding doctor:', error);
-        showNotification('Error adding doctor', 'error');
-    }
-}
-
-async function deleteDoctor(id) {
-    if (!confirm('Are you sure you want to delete this doctor?')) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/doctors/${id}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Doctor deleted successfully!');
-            loadDoctors();
-        } else {
-            showNotification(data.message || 'Error deleting doctor', 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting doctor:', error);
-        showNotification('Error deleting doctor', 'error');
-    }
-}
-
-// ===== APPOINTMENTS =====
+/* ---------- APPOINTMENTS ---------- */
 async function loadAppointments() {
-    const loading = document.getElementById('appointments-loading');
-    const table = document.getElementById('appointments-table');
-    const tbody = document.getElementById('appointments-tbody');
+  appointmentsLoading.classList.remove('hidden');
+  document.getElementById('appointments-table').classList.add('hidden');
 
-    loading.classList.remove('hidden');
-    table.classList.add('hidden');
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/appointments`);
-        const data = await response.json();
-
-        if (data.success) {
-            appointments = data.data;
-            tbody.innerHTML = '';
-
-            appointments.forEach(appointment => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${appointment.patient_id.substring(0, 8)}...</td>
-                    <td>${appointment.doctor_id.substring(0, 8)}...</td>
-                    <td>${appointment.appointment_date}</td>
-                    <td><span class="status-badge status-${appointment.status}">${appointment.status}</span></td>
-                    <td>${appointment.complaint || '-'}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="deleteAppointment('${appointment._id}')">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error('Error loading appointments:', error);
-        loading.textContent = 'Error loading appointments';
-        showNotification('Error loading appointments', 'error');
+  try {
+    const res = await fetch(`${API_BASE_URL}/appointments`);
+    const data = await res.json();
+    if (data.success) {
+      appointments = data.data;
+      renderAppointmentsTable();
+    } else {
+      appointmentsTbody.innerHTML = `<tr><td colspan="6">No data</td></tr>`;
     }
+  } catch (err) {
+    console.error(err);
+    showNotification('Error loading appointments', 'error');
+    appointmentsTbody.innerHTML = `<tr><td colspan="6">Error</td></tr>`;
+  } finally {
+    appointmentsLoading.classList.add('hidden');
+    document.getElementById('appointments-table').classList.remove('hidden');
+    loadOverviewCounts();
+  }
 }
 
-async function showAddAppointmentForm() {
-    document.getElementById('add-appointment-form').classList.remove('hidden');
-
-    // Load patients and doctors for dropdowns
-    await loadPatientsDropdown('appointment-patient');
-    await loadDoctorsDropdown('appointment-doctor');
+function renderAppointmentsTable() {
+  appointmentsTbody.innerHTML = '';
+  if (!appointments || appointments.length === 0) {
+    appointmentsTbody.innerHTML = `<tr><td colspan="6">No appointments found</td></tr>`;
+    return;
+  }
+  appointments.forEach(a => {
+    const pName = resolveNameFromId(patients, a.patient_id) || a.patient_id;
+    const dName = resolveNameFromId(doctors, a.doctor_id) || a.doctor_id;
+    const statusClass = `status-${(a.status||'pending').toLowerCase()}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${pName}</td>
+      <td>${dName}</td>
+      <td>${formatDisplayDate(a.appointment_date)}</td>
+      <td><span class="badge ${statusClass}">${a.status || 'pending'}</span></td>
+      <td>${a.complaint || '-'}</td>
+      <td>
+        <button class="small-btn edit-btn" data-edit-appointment="${a._id}">Edit</button>
+        <button class="small-btn delete-btn" data-delete-appointment="${a._id}">Delete</button>
+      </td>
+    `;
+    appointmentsTbody.appendChild(tr);
+  });
 }
 
-function hideAddAppointmentForm() {
-    document.getElementById('add-appointment-form').classList.add('hidden');
-    document.querySelector('#add-appointment-form form').reset();
-}
-
-async function loadPatientsDropdown(selectId) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/patients`);
-        const data = await response.json();
-
-        if (data.success) {
-            const select = document.getElementById(selectId);
-            select.innerHTML = '<option value="">Select Patient</option>';
-
-            data.data.forEach(patient => {
-                const option = document.createElement('option');
-                option.value = patient._id;
-                option.textContent = `${patient.name} - ${patient.phone}`;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading patients dropdown:', error);
-    }
-}
-
-async function loadDoctorsDropdown(selectId) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/doctors`);
-        const data = await response.json();
-
-        if (data.success) {
-            const select = document.getElementById(selectId);
-            select.innerHTML = '<option value="">Select Doctor</option>';
-
-            data.data.forEach(doctor => {
-                const option = document.createElement('option');
-                option.value = doctor._id;
-                option.textContent = `${doctor.name} - ${doctor.specialization}`;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading doctors dropdown:', error);
-    }
-}
-
-async function addAppointment(event) {
-    event.preventDefault();
-
-    const datetimeValue = document.getElementById('appointment-datetime').value;
-    // Convert from "2024-11-15T10:00" to "2024-11-15 10:00"
-    const formattedDate = datetimeValue.replace('T', ' ');
-
-    const appointmentData = {
-        patient_id: document.getElementById('appointment-patient').value,
-        doctor_id: document.getElementById('appointment-doctor').value,
-        appointment_date: formattedDate,
-        complaint: document.getElementById('appointment-complaint').value
-    };
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/appointments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(appointmentData)
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Appointment created successfully!');
-            hideAddAppointmentForm();
-            loadAppointments();
-        } else {
-            showNotification(data.message || 'Error creating appointment', 'error');
-        }
-    } catch (error) {
-        console.error('Error creating appointment:', error);
-        showNotification('Error creating appointment', 'error');
-    }
-}
-
-async function deleteAppointment(id) {
-    if (!confirm('Are you sure you want to delete this appointment?')) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Appointment deleted successfully!');
-            loadAppointments();
-        } else {
-            showNotification(data.message || 'Error deleting appointment', 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting appointment:', error);
-        showNotification('Error deleting appointment', 'error');
-    }
-}
-
-// ===== MEDICAL RECORDS =====
+/* ---------- RECORDS ---------- */
 async function loadMedicalRecords() {
-    const loading = document.getElementById('records-loading');
-    const table = document.getElementById('records-table');
-    const tbody = document.getElementById('records-tbody');
+  recordsLoading.classList.remove('hidden');
+  document.getElementById('records-table').classList.add('hidden');
 
-    loading.classList.remove('hidden');
-    table.classList.add('hidden');
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/records`);
-        const data = await response.json();
-
-        if (data.success) {
-            records = data.data;
-            tbody.innerHTML = '';
-
-            records.forEach(record => {
-                const row = document.createElement('tr');
-                const recordDate = new Date(record.date).toLocaleDateString();
-
-                row.innerHTML = `
-                    <td>${record.patient_id.substring(0, 8)}...</td>
-                    <td>${record.doctor_id.substring(0, 8)}...</td>
-                    <td>${record.diagnosis}</td>
-                    <td>${record.prescription || '-'}</td>
-                    <td>${recordDate}</td>
-                    <td>
-                        <button class="btn btn-success" onclick="viewRecord('${record._id}')">View</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error('Error loading medical records:', error);
-        loading.textContent = 'Error loading medical records';
-        showNotification('Error loading medical records', 'error');
+  try {
+    const res = await fetch(`${API_BASE_URL}/records`);
+    const data = await res.json();
+    if (data.success) {
+      records = data.data;
+      renderRecordsTable();
+    } else {
+      recordsTbody.innerHTML = `<tr><td colspan="6">No data</td></tr>`;
     }
+  } catch (err) {
+    console.error(err);
+    showNotification('Error loading records', 'error');
+    recordsTbody.innerHTML = `<tr><td colspan="6">Error</td></tr>`;
+  } finally {
+    recordsLoading.classList.add('hidden');
+    document.getElementById('records-table').classList.remove('hidden');
+  }
 }
 
-async function showAddRecordForm() {
-    document.getElementById('add-record-form').classList.remove('hidden');
-
-    // Load patients, doctors, and appointments for dropdowns
-    await loadPatientsDropdown('record-patient');
-    await loadDoctorsDropdown('record-doctor');
-    await loadAppointmentsDropdown('record-appointment');
+function renderRecordsTable() {
+  recordsTbody.innerHTML = '';
+  if (!records || records.length === 0) {
+    recordsTbody.innerHTML = `<tr><td colspan="6">No records</td></tr>`;
+    return;
+  }
+  records.forEach(r => {
+    const pName = resolveNameFromId(patients, r.patient_id) || r.patient_id;
+    const dName = resolveNameFromId(doctors, r.doctor_id) || r.doctor_id;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${pName}</td>
+      <td>${dName}</td>
+      <td>${r.diagnosis}</td>
+      <td>${r.prescription || '-'}</td>
+      <td>${new Date(r.date || r.createdAt || Date.now()).toLocaleDateString()}</td>
+      <td>
+        <button class="small-btn" data-view-record="${r._id}">View</button>
+      </td>
+    `;
+    recordsTbody.appendChild(tr);
+  });
 }
 
-function hideAddRecordForm() {
-    document.getElementById('add-record-form').classList.add('hidden');
-    document.querySelector('#add-record-form form').reset();
+/* ------------------------------
+  Utility to map name from id (for display)
+-------------------------------*/
+function resolveNameFromId(list, id) {
+  if (!Array.isArray(list)) return null;
+  const found = list.find(x => x._id === id);
+  return found ? (found.name || found.fullname || found.title) : null;
 }
 
-async function loadAppointmentsDropdown(selectId) {
+/* ------------------------------
+  Event delegation for Edit/Delete/View buttons
+-------------------------------*/
+document.addEventListener('click', async (ev) => {
+  // === EDIT ===
+  if (ev.target.matches('[data-edit-patient]')) {
+    const id = ev.target.dataset.editPatient;
+    const p = patients.find(x => x._id === id);
+    if (p) setupEditPatientModal(p);
+  }
+  if (ev.target.matches('[data-edit-doctor]')) {
+    const id = ev.target.dataset.editDoctor;
+    const d = doctors.find(x => x._id === id);
+    if (d) setupEditDoctorModal(d);
+  }
+  if (ev.target.matches('[data-edit-appointment]')) {
+    const id = ev.target.dataset.editAppointment;
+    const a = appointments.find(x => x._id === id);
+    if (a) setupEditAppointmentModal(a);
+  }
+
+  // === DELETE ===
+  if (ev.target.matches('[data-delete-patient]')) {
+    const id = ev.target.dataset.deletePatient;
+    if (!confirm('Delete this patient?')) return;
     try {
-        const response = await fetch(`${API_BASE_URL}/appointments`);
-        const data = await response.json();
+      const res = await fetch(`${API_BASE_URL}/patients/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) showNotification('Patient deleted');
+      else showNotification(data.message || 'Failed to delete', 'error');
+      loadPatients();
+      loadOverviewCounts();
+    } catch (err) { showNotification('Error deleting patient', 'error'); }
+  }
 
-        if (data.success) {
-            const select = document.getElementById(selectId);
-            select.innerHTML = '<option value="">Select Appointment (Optional)</option>';
+  if (ev.target.matches('[data-delete-doctor]')) {
+    const id = ev.target.dataset.deleteDoctor;
+    if (!confirm('Delete this doctor?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) showNotification('Doctor deleted');
+      else showNotification(data.message || 'Failed to delete', 'error');
+      loadDoctors();
+      loadOverviewCounts();
+    } catch (err) { showNotification('Error deleting doctor', 'error'); }
+  }
 
-            data.data.forEach(appointment => {
-                const option = document.createElement('option');
-                option.value = appointment._id;
-                option.textContent = `${appointment.appointment_date} - ${appointment.status}`;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading appointments dropdown:', error);
-    }
-}
+  if (ev.target.matches('[data-delete-appointment]')) {
+    const id = ev.target.dataset.deleteAppointment;
+    if (!confirm('Delete this appointment?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/appointments/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) showNotification('Appointment deleted');
+      else showNotification(data.message || 'Failed to delete', 'error');
+      loadAppointments();
+      loadOverviewCounts();
+    } catch (err) { showNotification('Error deleting appointment', 'error'); }
+  }
 
-async function addMedicalRecord(event) {
-    event.preventDefault();
+  // view record
+  if (ev.target.matches('[data-view-record]')) {
+    const id = ev.target.dataset.viewRecord;
+    const r = records.find(x => x._id === id);
+    if (!r) { showNotification('Record not found', 'error'); return; }
+    alert(
+      `Record Details:\n\nPatient: ${resolveNameFromId(patients, r.patient_id)||r.patient_id}\nDoctor: ${resolveNameFromId(doctors, r.doctor_id)||r.doctor_id}\nDiagnosis: ${r.diagnosis}\nPrescription: ${r.prescription||'N/A'}\nNotes: ${r.notes||'N/A'}\nDate: ${formatDisplayDate(r.date||r.createdAt)}`
+    );
+  }
+});
 
-    const recordData = {
-        patient_id: document.getElementById('record-patient').value,
-        doctor_id: document.getElementById('record-doctor').value,
-        appointment_id: document.getElementById('record-appointment').value || undefined,
-        diagnosis: document.getElementById('record-diagnosis').value,
-        prescription: document.getElementById('record-prescription').value,
-        notes: document.getElementById('record-notes').value
+/* ------------------------------
+  FORM SUBMISSIONS (create/update)
+-------------------------------*/
+async function handleFormSubmission(e, formId, urlBase, successMsg, loadFunc) {
+  e.preventDefault();
+  
+  const id = document.getElementById(`${formId}-id`)?.value;
+  const isUpdate = !!id;
+  const method = isUpdate ? 'PUT' : 'POST';
+  const url = isUpdate ? `${API_BASE_URL}/${urlBase}/${id}` : `${API_BASE_URL}/${urlBase}`;
+  const submitBtn = document.getElementById(`${formId}SubmitBtn`);
+  
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = isUpdate ? 'Updating...' : 'Saving...';
+  submitBtn.disabled = true;
+
+  let payload = {};
+
+  if (formId === 'patient') {
+    payload = {
+      name: document.getElementById('patient-name').value,
+      birth_date: document.getElementById('patient-birthdate').value,
+      gender: document.getElementById('patient-gender').value,
+      phone: document.getElementById('patient-phone').value,
+      address: document.getElementById('patient-address').value,
+      blood_type: document.getElementById('patient-bloodtype').value
     };
+  } else if (formId === 'doctor') {
+    const schedule = (document.getElementById('doctor-schedule').value || '')
+        .split('\n').map(s => s.trim()).filter(Boolean);
+    payload = {
+      name: document.getElementById('doctor-name').value,
+      specialization: document.getElementById('doctor-specialization').value,
+      phone: document.getElementById('doctor-phone').value,
+      schedule
+    };
+  } else if (formId === 'appointment') {
+    const dt = document.getElementById('appointment-datetime').value;
+    payload = {
+      patient_id: appointmentPatientSelect.value,
+      doctor_id: appointmentDoctorSelect.value,
+      appointment_date: dt ? dt.replace('T', ' ') : undefined,
+      complaint: document.getElementById('appointment-complaint').value,
+      status: appointmentStatusSelect.value
+    };
+  } else if (formId === 'record') {
+    payload = {
+      patient_id: recordPatientSelect.value,
+      doctor_id: recordDoctorSelect.value,
+      appointment_id: recordAppointmentSelect.value || undefined,
+      diagnosis: document.getElementById('record-diagnosis').value,
+      prescription: document.getElementById('record-prescription').value,
+      notes: document.getElementById('record-notes').value
+    };
+  }
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/records`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(recordData)
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Medical record added successfully!');
-            hideAddRecordForm();
-            loadMedicalRecords();
-        } else {
-            showNotification(data.message || 'Error adding medical record', 'error');
-        }
-    } catch (error) {
-        console.error('Error adding medical record:', error);
-        showNotification('Error adding medical record', 'error');
-    }
+  try {
+    const res = await fetch(url, {
+      method: method, 
+      headers: {'Content-Type':'application/json'}, 
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showNotification(`${successMsg} ${isUpdate ? 'updated' : 'added/created'}`);
+      e.target.reset();
+      closeModalById(`modal${formId.charAt(0).toUpperCase() + formId.slice(1)}`);
+      if (id) document.getElementById(`${formId}-id`).value = ''; // Reset ID
+      loadFunc();
+      populateDropdowns(); 
+    } else showNotification(data.message || `Failed to ${isUpdate ? 'update' : 'add/create'}`, 'error');
+  } catch (err) { 
+    console.error(err); 
+    showNotification(`Error ${isUpdate ? 'updating' : 'adding'} ${formId}`, 'error'); 
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+  }
 }
 
-function viewRecord(id) {
-    const record = records.find(r => r._id === id);
-    if (record) {
-        alert(`Medical Record Details:\n\n` +
-              `Patient ID: ${record.patient_id}\n` +
-              `Doctor ID: ${record.doctor_id}\n` +
-              `Diagnosis: ${record.diagnosis}\n` +
-              `Prescription: ${record.prescription || 'N/A'}\n` +
-              `Notes: ${record.notes || 'N/A'}\n` +
-              `Date: ${new Date(record.date).toLocaleString()}`);
-    }
+formPatient.addEventListener('submit', (e) => handleFormSubmission(e, 'patient', 'patients', 'Patient', loadPatients));
+formDoctor.addEventListener('submit', (e) => handleFormSubmission(e, 'doctor', 'doctors', 'Doctor', loadDoctors));
+formAppointment.addEventListener('submit', (e) => handleFormSubmission(e, 'appointment', 'appointments', 'Appointment', loadAppointments));
+formRecord.addEventListener('submit', (e) => handleFormSubmission(e, 'record', 'records', 'Record', loadMedicalRecords));
+
+
+/* ------------------------------
+  OPEN MODAL BUTTONS & POPULATE DROPDOWNS
+-------------------------------*/
+document.getElementById('btnAddPatient').addEventListener('click', () => {
+  formPatient.reset();
+  patientIdInput.value = ''; 
+  openModal(modalPatient, false);
+});
+document.getElementById('overviewAddPatient').addEventListener('click', () => {
+  formPatient.reset();
+  patientIdInput.value = ''; 
+  openModal(modalPatient, false);
+});
+document.getElementById('btnAddDoctor').addEventListener('click', () => {
+  formDoctor.reset();
+  doctorIdInput.value = ''; 
+  openModal(modalDoctor, false);
+});
+document.getElementById('btnAddAppointment').addEventListener('click', async () => {
+  formAppointment.reset();
+  appointmentIdInput.value = ''; 
+  await populateDropdowns();
+  openModal(modalAppointment, false);
+});
+document.getElementById('btnAddRecord').addEventListener('click', async () => {
+  formRecord.reset();
+  await populateDropdowns();
+  openModal(modalRecord);
+});
+
+/* Populate patient/doctor dropdowns used in modals */
+async function populateDropdowns() {
+  try {
+    const [pRes, dRes, aRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/patients`),
+      fetch(`${API_BASE_URL}/doctors`),
+      fetch(`${API_BASE_URL}/appointments`)
+    ]);
+    const pData = await pRes.json();
+    const dData = await dRes.json();
+    const aData = await aRes.json();
+
+    patients = (pData && pData.success) ? pData.data : [];
+    doctors = (dData && dData.success) ? dData.data : [];
+    appointments = (aData && aData.success) ? aData.data : [];
+
+    [appointmentPatientSelect, recordPatientSelect].forEach(sel => {
+      const selectedValue = sel.value; 
+      sel.innerHTML = `<option value="">Select Patient</option>`;
+      patients.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p._id;
+        opt.textContent = `${p.name} — ${p.phone || ''}`;
+        sel.appendChild(opt);
+      });
+      sel.value = selectedValue; 
+    });
+
+    [appointmentDoctorSelect, recordDoctorSelect].forEach(sel => {
+      const selectedValue = sel.value;
+      sel.innerHTML = `<option value="">Select Doctor</option>`;
+      doctors.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d._id;
+        opt.textContent = `${d.name} — ${d.specialization || ''}`;
+        sel.appendChild(opt);
+      });
+      sel.value = selectedValue;
+    });
+
+    const selectedApptValue = recordAppointmentSelect.value;
+    recordAppointmentSelect.innerHTML = `<option value="">None</option>`;
+    appointments.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a._id;
+      opt.textContent = `${formatDisplayDate(a.appointment_date)} — ${a.status || ''}`;
+      recordAppointmentSelect.appendChild(opt);
+    });
+    recordAppointmentSelect.value = selectedApptValue;
+
+  } catch (err) {
+    console.error('populateDropdowns error', err);
+  }
 }
+
+/* ------------------------------
+  Refresh all data
+-------------------------------*/
+document.getElementById('refreshAll').addEventListener('click', () => {
+  loadPatients(); loadDoctors(); loadAppointments(); loadMedicalRecords(); loadOverviewCounts();
+  showNotification('Refreshed');
+});
+
+/* ------------------------------
+  Global search (very light)
+-------------------------------*/
+document.getElementById('globalSearch').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  if (!q) { 
+    const active = document.querySelector('.nav-item.active').dataset.section;
+    if (active === 'patients') renderPatientsTable();
+    if (active === 'doctors') renderDoctorsTable();
+    if (active === 'appointments') renderAppointmentsTable();
+    if (active === 'records') renderRecordsTable();
+    return;
+  }
+  const filteredPatients = patients.filter(p => (p.name||'').toLowerCase().includes(q) || (p.phone||'').includes(q));
+  const filteredDoctors = doctors.filter(d => (d.name||'').toLowerCase().includes(q) || (d.specialization||'').toLowerCase().includes(q));
+  
+  const activeSectionBtn = document.querySelector('.nav-item.active');
+  if (!activeSectionBtn) return;
+  const active = activeSectionBtn.dataset.section;
+
+  if (active === 'patients') {
+    patientsTbody.innerHTML = '';
+    filteredPatients.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${p.name}</td><td>${p.birth_date ? p.birth_date.split('T')[0] : '-'}</td><td>${p.gender||'-'}</td><td>${p.phone||'-'}</td><td>${p.blood_type||'-'}</td><td><button class="small-btn edit-btn" data-edit-patient="${p._id}">Edit</button> <button class="small-btn delete-btn" data-delete-patient="${p._id}">Delete</button></td>`;
+      patientsTbody.appendChild(tr);
+    });
+  } else if (active === 'doctors') {
+    doctorsTbody.innerHTML = '';
+    filteredDoctors.forEach(d => {
+      const schedule = Array.isArray(d.schedule) ? d.schedule.join('<br>') : (d.schedule || '-');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${d.name}</td><td>${d.specialization}</td><td>${d.phone||'-'}</td><td>${schedule}</td><td><button class="small-btn edit-btn" data-edit-doctor="${d._id}">Edit</button> <button class="small-btn delete-btn" data-delete-doctor="${d._id}">Delete</button></td>`;
+      doctorsTbody.appendChild(tr);
+    });
+  }
+});
+
+/* ------------------------------
+  INIT: load all initial data
+-------------------------------*/
+(async function init() {
+  await loadOverviewCounts();
+  await loadPatients();
+  loadDoctors();
+  loadAppointments();
+  loadMedicalRecords();
+  populateDropdowns();
+})();

@@ -13,6 +13,19 @@
 
 ---
 
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Backend Framework** | Node.js + Express | REST API services |
+| **Database** | MongoDB Atlas | Cloud database |
+| **Frontend** | HTML + CSS + Vanilla JavaScript | Admin dashboard |
+| **HTTP Client** | Axios | Inter-service communication |
+| **API Documentation** | Swagger UI + swagger-jsdoc | OpenAPI 3.0 documentation |
+| **CORS** | cors package | Cross-origin resource sharing |
+
+---
+
 ## 🏗️ Arsitektur Sistem
 
 ### Diagram Arsitektur
