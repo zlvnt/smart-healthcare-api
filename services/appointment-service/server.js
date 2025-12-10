@@ -93,7 +93,7 @@ app.get('/appointments/:id', async (req, res) => {
 // POST create new appointment (with validation)
 app.post('/appointments', async (req, res) => {
   try {
-    const { patient_id, doctor_id, appointment_date, complaint } = req.body;
+    const { patient_id, doctor_id, appointment_date, complaint, status } = req.body;
 
     // Validate patient exists
     const patient = await validatePatient(patient_id);
@@ -113,13 +113,22 @@ app.post('/appointments', async (req, res) => {
       });
     }
 
+    // Validate status if provided
+    const appointmentStatus = status || 'pending';
+    if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(appointmentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be: pending, confirmed, completed, or cancelled'
+      });
+    }
+
     // Create appointment
     const appointment = new Appointment({
       patient_id,
       doctor_id,
       appointment_date,
       complaint,
-      status: 'pending'
+      status: appointmentStatus
     });
 
     await appointment.save();
@@ -133,6 +142,53 @@ app.post('/appointments', async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error creating appointment',
+      error: error.message
+    });
+  }
+});
+
+// PUT update appointment (full update)
+app.put('/appointments/:id', async (req, res) => {
+  try {
+    const { patient_id, doctor_id, appointment_date, complaint, status } = req.body;
+    const updateData = {};
+
+    if (patient_id !== undefined) updateData.patient_id = patient_id;
+    if (doctor_id !== undefined) updateData.doctor_id = doctor_id;
+    if (appointment_date !== undefined) updateData.appointment_date = appointment_date;
+    if (complaint !== undefined) updateData.complaint = complaint;
+    if (status !== undefined) {
+      if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status. Must be: pending, confirmed, completed, or cancelled'
+        });
+      }
+      updateData.status = status;
+    }
+
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Appointment updated successfully',
+      data: appointment
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: 'Error updating appointment',
       error: error.message
     });
   }

@@ -4,6 +4,17 @@
 
 ---
 
+## 👥 Anggota Kelompok
+
+| Nama | NIM | Kontribusi |
+|------|-----|------------|
+| Dendi Prawira | 102022330454 | Patient Service, API Gateway, Frontend |
+| Haipa Zuhaira | 102022330455 | Doctor Service, API Gateway, Frontend |
+| Zelvin Apri Thady | 102022330294 | Appointment Service, Medical Record Service, API Gateway, Frontend |
+| Muhammad Zakiyy Mujahid | 102022330243 | API Gateway, Frontend |
+
+---
+
 ## 📌 Ringkasan Project
 
 **Tema:** Smart Healthcare System

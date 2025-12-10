@@ -514,6 +514,53 @@ app.post('/api/appointments', async (req, res) => {
 
 /**
  * @swagger
+ * /api/appointments/{id}:
+ *   put:
+ *     summary: Update appointment
+ *     tags: [Appointments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               patient_id:
+ *                 type: string
+ *               doctor_id:
+ *                 type: string
+ *               appointment_date:
+ *                 type: string
+ *               complaint:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [pending, confirmed, completed, cancelled]
+ *     responses:
+ *       200:
+ *         description: Appointment updated successfully
+ */
+app.put('/api/appointments/:id', async (req, res) => {
+  try {
+    const response = await axios.put(`${APPOINTMENT_SERVICE_URL}/appointments/${req.params.id}`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      success: false,
+      message: 'Error updating appointment',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/appointments/{id}/status:
  *   put:
  *     summary: Update appointment status
