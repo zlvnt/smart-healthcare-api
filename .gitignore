@@ -14,3 +14,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.dbhealthcare-impl-guide.md
 referensi-tugas.md
+
+*.sh
+SCRIPTS.md
