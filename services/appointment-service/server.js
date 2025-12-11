@@ -2,15 +2,28 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const axios = require('axios');
+const { graphqlHTTP } = require('express-graphql');
 require('dotenv').config({ path: '../../.env' });
 
 const Appointment = require('./models/Appointment');
+const schema = require('./graphql/schema');
 
 const app = express();
 const PORT = process.env.APPOINTMENT_PORT || 3003;
 
 app.use(cors());
 app.use(express.json());
+
+// GraphQL endpoint
+app.use('/graphql', graphqlHTTP({
+  schema: schema,
+  rootValue: {},
+  graphiql: true,
+  customFormatErrorFn: (error) => ({
+    message: error.message,
+    status: 400
+  })
+}));
 
 mongoose.connect(process.env.MONGODB_URI, {
   dbName: process.env.DB_NAME || 'healthcare_db'

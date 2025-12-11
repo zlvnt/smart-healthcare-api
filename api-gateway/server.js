@@ -22,6 +22,40 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
+// GraphQL Endpoints (forward to services)
+app.post('/graphql/patients', async (req, res) => {
+  try {
+    const response = await axios.post(`${PATIENT_SERVICE_URL}/graphql`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      errors: [{ message: error.message }]
+    });
+  }
+});
+
+app.post('/graphql/doctors', async (req, res) => {
+  try {
+    const response = await axios.post(`${DOCTOR_SERVICE_URL}/graphql`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      errors: [{ message: error.message }]
+    });
+  }
+});
+
+app.post('/graphql/appointments', async (req, res) => {
+  try {
+    const response = await axios.post(`${APPOINTMENT_SERVICE_URL}/graphql`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      errors: [{ message: error.message }]
+    });
+  }
+});
+
 // Patient Service routes
 
 /**

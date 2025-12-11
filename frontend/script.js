@@ -1,8 +1,30 @@
 /* ------------------------------
   Smart Healthcare — Frontend JS
-  Pure JS, connects to API_BASE_URL
+  Pure JS, connects to GraphQL API
 -------------------------------*/
-const API_BASE_URL = 'http://localhost:3000/api'; // <- pastikan backend berjalan di sini
+const API_BASE_URL = 'http://localhost:3000/api'; // REST endpoints
+const GRAPHQL_BASE_URL = 'http://localhost:3000/graphql'; // GraphQL endpoints
+
+/* GraphQL Query/Mutation Helpers */
+async function graphqlQuery(endpoint, query, variables = {}) {
+  try {
+    const response = await fetch(`${GRAPHQL_BASE_URL}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    });
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0]?.message || 'GraphQL Error');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error(`GraphQL Error (${endpoint}):`, error);
+    throw error;
+  }
+}
 
 // Cached DOM
 const navItems = document.querySelectorAll('.nav-item');
@@ -225,10 +247,24 @@ async function loadPatients() {
   document.getElementById('patients-table').classList.add('hidden');
 
   try {
-    const res = await fetch(`${API_BASE_URL}/patients`);
-    const data = await res.json();
-    if (data.success) {
-      patients = data.data;
+    const query = `{
+      patients {
+        id
+        name
+        birth_date
+        gender
+        phone
+        blood_type
+        address
+      }
+    }`;
+
+    const data = await graphqlQuery('patients', query);
+    if (data && data.patients) {
+      patients = data.patients.map(p => ({
+        ...p,
+        _id: p.id
+      }));
       renderPatientsTable();
     } else {
       patientsTbody.innerHTML = `<tr><td colspan="6">No data</td></tr>`;
@@ -273,10 +309,22 @@ async function loadDoctors() {
   document.getElementById('doctors-table').classList.add('hidden');
 
   try {
-    const res = await fetch(`${API_BASE_URL}/doctors`);
-    const data = await res.json();
-    if (data.success) {
-      doctors = data.data;
+    const query = `{
+      doctors {
+        id
+        name
+        specialization
+        phone
+        schedule
+      }
+    }`;
+
+    const data = await graphqlQuery('doctors', query);
+    if (data && data.doctors) {
+      doctors = data.doctors.map(d => ({
+        ...d,
+        _id: d.id
+      }));
       renderDoctorsTable();
     } else {
       doctorsTbody.innerHTML = `<tr><td colspan="5">No data</td></tr>`;
@@ -321,10 +369,23 @@ async function loadAppointments() {
   document.getElementById('appointments-table').classList.add('hidden');
 
   try {
-    const res = await fetch(`${API_BASE_URL}/appointments`);
-    const data = await res.json();
-    if (data.success) {
-      appointments = data.data;
+    const query = `{
+      appointments {
+        id
+        patient_id
+        doctor_id
+        appointment_date
+        status
+        complaint
+      }
+    }`;
+
+    const data = await graphqlQuery('appointments', query);
+    if (data && data.appointments) {
+      appointments = data.appointments.map(a => ({
+        ...a,
+        _id: a.id
+      }));
       renderAppointmentsTable();
     } else {
       appointmentsTbody.innerHTML = `<tr><td colspan="6">No data</td></tr>`;
@@ -500,78 +561,133 @@ document.addEventListener('click', async (ev) => {
 -------------------------------*/
 async function handleFormSubmission(e, formId, urlBase, successMsg, loadFunc) {
   e.preventDefault();
-  
+
   const id = document.getElementById(`${formId}-id`)?.value;
   const isUpdate = !!id;
-  const method = isUpdate ? 'PUT' : 'POST';
-  const url = isUpdate ? `${API_BASE_URL}/${urlBase}/${id}` : `${API_BASE_URL}/${urlBase}`;
   const submitBtn = document.getElementById(`${formId}SubmitBtn`);
-  
+
   const originalText = submitBtn.textContent;
   submitBtn.textContent = isUpdate ? 'Updating...' : 'Saving...';
   submitBtn.disabled = true;
 
-  let payload = {};
-
-  if (formId === 'patient') {
-    payload = {
-      name: document.getElementById('patient-name').value,
-      birth_date: document.getElementById('patient-birthdate').value,
-      gender: document.getElementById('patient-gender').value,
-      phone: document.getElementById('patient-phone').value,
-      address: document.getElementById('patient-address').value,
-      blood_type: document.getElementById('patient-bloodtype').value
-    };
-  } else if (formId === 'doctor') {
-    const schedule = (document.getElementById('doctor-schedule').value || '')
-        .split('\n').map(s => s.trim()).filter(Boolean);
-    payload = {
-      name: document.getElementById('doctor-name').value,
-      specialization: document.getElementById('doctor-specialization').value,
-      phone: document.getElementById('doctor-phone').value,
-      schedule
-    };
-  } else if (formId === 'appointment') {
-    const dt = document.getElementById('appointment-datetime').value;
-    payload = {
-      patient_id: appointmentPatientSelect.value,
-      doctor_id: appointmentDoctorSelect.value,
-      appointment_date: dt ? dt.replace('T', ' ') : undefined,
-      complaint: document.getElementById('appointment-complaint').value,
-      status: appointmentStatusSelect.value
-    };
-  } else if (formId === 'record') {
-    payload = {
-      patient_id: recordPatientSelect.value,
-      doctor_id: recordDoctorSelect.value,
-      appointment_id: recordAppointmentSelect.value || undefined,
-      diagnosis: document.getElementById('record-diagnosis').value,
-      prescription: document.getElementById('record-prescription').value,
-      notes: document.getElementById('record-notes').value
-    };
-  }
-
   try {
-    const res = await fetch(url, {
-      method: method, 
-      headers: {'Content-Type':'application/json'}, 
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      showNotification(`${successMsg} ${isUpdate ? 'updated' : 'added/created'}`);
-      e.target.reset();
-      closeModalById(`modal${formId.charAt(0).toUpperCase() + formId.slice(1)}`);
-      if (id) document.getElementById(`${formId}-id`).value = ''; // Reset ID
-      loadFunc();
-      populateDropdowns(); 
-    } else showNotification(data.message || `Failed to ${isUpdate ? 'update' : 'add/create'}`, 'error');
-  } catch (err) { 
-    console.error(err); 
-    showNotification(`Error ${isUpdate ? 'updating' : 'adding'} ${formId}`, 'error'); 
+    // Use GraphQL for Patient, Doctor, Appointment
+    if (['patient', 'doctor', 'appointment'].includes(formId)) {
+      await handleGraphQLMutation(formId, id, isUpdate);
+    } else if (formId === 'record') {
+      // Keep REST for Medical Record
+      await handleRESTSubmission(formId, id, isUpdate, urlBase);
+    }
+
+    showNotification(`${successMsg} ${isUpdate ? 'updated' : 'added/created'}`);
+    e.target.reset();
+    closeModalById(`modal${formId.charAt(0).toUpperCase() + formId.slice(1)}`);
+    if (id) document.getElementById(`${formId}-id`).value = '';
+    loadFunc();
+    populateDropdowns();
+  } catch (err) {
+    console.error(err);
+    showNotification(`Error ${isUpdate ? 'updating' : 'adding'} ${formId}`, 'error');
   } finally {
     submitBtn.textContent = originalText;
     submitBtn.disabled = false;
+  }
+}
+
+async function handleGraphQLMutation(formId, id, isUpdate) {
+  let mutation = '';
+
+  if (formId === 'patient') {
+    const name = document.getElementById('patient-name').value;
+    const birth_date = document.getElementById('patient-birthdate').value;
+    const gender = document.getElementById('patient-gender').value;
+    const phone = document.getElementById('patient-phone').value;
+    const address = document.getElementById('patient-address').value;
+    const blood_type = document.getElementById('patient-bloodtype').value;
+
+    if (isUpdate) {
+      mutation = `mutation {
+        updatePatient(id: "${id}", name: "${name}", phone: "${phone}", address: "${address}", blood_type: "${blood_type}") {
+          id name birth_date gender phone address blood_type
+        }
+      }`;
+    } else {
+      mutation = `mutation {
+        createPatient(name: "${name}", birth_date: "${birth_date}", gender: "${gender}", phone: "${phone}", address: "${address}", blood_type: "${blood_type}") {
+          id name birth_date gender phone address blood_type
+        }
+      }`;
+    }
+    await graphqlQuery('patients', mutation);
+  }
+  else if (formId === 'doctor') {
+    const name = document.getElementById('doctor-name').value;
+    const specialization = document.getElementById('doctor-specialization').value;
+    const phone = document.getElementById('doctor-phone').value;
+    const schedule = (document.getElementById('doctor-schedule').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const scheduleStr = JSON.stringify(schedule).replace(/"/g, '\\"');
+
+    if (isUpdate) {
+      mutation = `mutation {
+        updateDoctor(id: "${id}", name: "${name}", phone: "${phone}", schedule: ${JSON.stringify(schedule)}) {
+          id name specialization phone schedule
+        }
+      }`;
+    } else {
+      mutation = `mutation {
+        createDoctor(name: "${name}", specialization: "${specialization}", phone: "${phone}", schedule: ${JSON.stringify(schedule)}) {
+          id name specialization phone schedule
+        }
+      }`;
+    }
+    await graphqlQuery('doctors', mutation);
+  }
+  else if (formId === 'appointment') {
+    const patient_id = appointmentPatientSelect.value;
+    const doctor_id = appointmentDoctorSelect.value;
+    const dt = document.getElementById('appointment-datetime').value;
+    const appointment_date = dt ? dt.replace('T', ' ') : '';
+    const complaint = document.getElementById('appointment-complaint').value;
+    const status = appointmentStatusSelect.value;
+
+    if (isUpdate) {
+      mutation = `mutation {
+        updateAppointmentStatus(id: "${id}", status: "${status}") {
+          id patient_id doctor_id appointment_date status complaint
+        }
+      }`;
+    } else {
+      mutation = `mutation {
+        createAppointment(patient_id: "${patient_id}", doctor_id: "${doctor_id}", appointment_date: "${appointment_date}", complaint: "${complaint}", status: "${status}") {
+          id patient_id doctor_id appointment_date status complaint
+        }
+      }`;
+    }
+    await graphqlQuery('appointments', mutation);
+  }
+}
+
+async function handleRESTSubmission(formId, id, isUpdate, urlBase) {
+  const method = isUpdate ? 'PUT' : 'POST';
+  const url = isUpdate ? `${API_BASE_URL}/${urlBase}/${id}` : `${API_BASE_URL}/${urlBase}`;
+
+  let payload = {
+    patient_id: recordPatientSelect.value,
+    doctor_id: recordDoctorSelect.value,
+    appointment_id: recordAppointmentSelect.value || undefined,
+    diagnosis: document.getElementById('record-diagnosis').value,
+    prescription: document.getElementById('record-prescription').value,
+    notes: document.getElementById('record-notes').value
+  };
+
+  const res = await fetch(url, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.message || 'Failed to submit');
   }
 }
 
@@ -614,18 +730,19 @@ document.getElementById('btnAddRecord').addEventListener('click', async () => {
 /* Populate patient/doctor dropdowns used in modals */
 async function populateDropdowns() {
   try {
-    const [pRes, dRes, aRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/patients`),
-      fetch(`${API_BASE_URL}/doctors`),
-      fetch(`${API_BASE_URL}/appointments`)
-    ]);
-    const pData = await pRes.json();
-    const dData = await dRes.json();
-    const aData = await aRes.json();
+    const pQuery = `{ patients { id name phone } }`;
+    const dQuery = `{ doctors { id name specialization } }`;
+    const aQuery = `{ appointments { id appointment_date status } }`;
 
-    patients = (pData && pData.success) ? pData.data : [];
-    doctors = (dData && dData.success) ? dData.data : [];
-    appointments = (aData && aData.success) ? aData.data : [];
+    const [pData, dData, aData] = await Promise.all([
+      graphqlQuery('patients', pQuery),
+      graphqlQuery('doctors', dQuery),
+      graphqlQuery('appointments', aQuery)
+    ]);
+
+    patients = (pData && pData.patients) ? pData.patients.map(p => ({ ...p, _id: p.id })) : [];
+    doctors = (dData && dData.doctors) ? dData.doctors.map(d => ({ ...d, _id: d.id })) : [];
+    appointments = (aData && aData.appointments) ? aData.appointments.map(a => ({ ...a, _id: a.id })) : [];
 
     [appointmentPatientSelect, recordPatientSelect].forEach(sel => {
       const selectedValue = sel.value; 
