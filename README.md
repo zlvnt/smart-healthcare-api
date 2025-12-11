@@ -4,35 +4,6 @@ Microservices-based healthcare management system dengan REST API dan Swagger doc
 
 ---
 
-## 🚀 Setup Instructions
-
-### 1. Install Dependencies
-
-```bash
-npm install --prefix services/patient-service
-npm install --prefix services/doctor-service
-npm install --prefix services/appointment-service
-npm install --prefix services/medical-record-service
-npm install --prefix api-gateway
-```
-
-### 2. Configure Environment
-
-Copy `.env.example` ke `.env` lalu edit `MONGODB_URI`:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```env
-MONGODB_URI=your_mongodb_atlas_connection_string_here
-```
-
-**⚠️ Important:** Whitelist IP address di MongoDB Atlas (Network Access).
-
----
-
 ## ▶️ How to Run
 
 Jalankan di **5 terminal terpisah**:
