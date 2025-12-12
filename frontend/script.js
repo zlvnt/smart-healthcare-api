@@ -206,35 +206,20 @@ async function loadOverviewCounts() {
     const [pResp, dResp, aResp] = await Promise.all([
       fetch(`${API_BASE_URL}/patients`),
       fetch(`${API_BASE_URL}/doctors`),
-      fetch(`${API_BASE_URL}/appointments/today`).catch(()=>null) 
+      fetch(`${API_BASE_URL}/appointments`)
     ]);
 
     const pData = await pResp.json();
     const dData = await dResp.json();
-    let aData = null;
-    if (aResp && aResp.ok) aData = await aResp.json();
+    const aData = await aResp.json();
 
     patients = (pData && pData.success) ? pData.data : [];
     doctors = (dData && dData.success) ? dData.data : [];
-
-    let todayCount = 0;
-    try {
-      if (aData && aData.success) {
-        todayCount = Array.isArray(aData.data) ? aData.data.length : 0;
-      } else {
-        const aAllResp = await fetch(`${API_BASE_URL}/appointments`);
-        const aAllData = await aAllResp.json();
-        if (aAllData && aAllData.success) {
-          appointments = aAllData.data;
-          const today = new Date().toDateString();
-          todayCount = appointments.filter(ap => new Date(ap.appointment_date).toDateString() === today).length;
-        }
-      }
-    } catch(e) { todayCount = 0; }
+    appointments = (aData && aData.success) ? aData.data : [];
 
     cardPatients.textContent = patients.length;
     cardDoctors.textContent = doctors.length;
-    cardAppointments.textContent = todayCount;
+    cardAppointments.textContent = appointments.length;
   } catch (err) {
     console.error('Error loading overview:', err);
     showNotification('Failed loading overview', 'error');
