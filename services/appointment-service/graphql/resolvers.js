@@ -1,8 +1,8 @@
 const axios = require('axios');
 const Appointment = require('../models/Appointment');
 
-const PATIENT_SERVICE_URL = `http://localhost:${process.env.PATIENT_PORT || 3001}`;
-const DOCTOR_SERVICE_URL = `http://localhost:${process.env.DOCTOR_PORT || 3002}`;
+const PATIENT_SERVICE_URL = `http://patient-service:${process.env.PATIENT_PORT || 3001}`;
+const DOCTOR_SERVICE_URL = `http://doctor-service:${process.env.DOCTOR_PORT || 3002}`;
 
 // Validate patient exists via GraphQL
 async function validatePatient(patientId) {

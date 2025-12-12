@@ -31,8 +31,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   .then(() => console.log('Appointment Service connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-const PATIENT_SERVICE_URL = `http://localhost:${process.env.PATIENT_PORT || 3001}`;
-const DOCTOR_SERVICE_URL = `http://localhost:${process.env.DOCTOR_PORT || 3002}`;
+const PATIENT_SERVICE_URL = `http://patient-service:${process.env.PATIENT_PORT || 3001}`;
+const DOCTOR_SERVICE_URL = `http://doctor-service:${process.env.DOCTOR_PORT || 3002}`;
 
 // validate patient
 async function validatePatient(patientId) {
