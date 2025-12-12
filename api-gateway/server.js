@@ -10,10 +10,10 @@ const PORT = process.env.GATEWAY_PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-const PATIENT_SERVICE_URL = `http://localhost:${process.env.PATIENT_PORT || 3001}`;
-const DOCTOR_SERVICE_URL = `http://localhost:${process.env.DOCTOR_PORT || 3002}`;
-const APPOINTMENT_SERVICE_URL = `http://localhost:${process.env.APPOINTMENT_PORT || 3003}`;
-const MEDICAL_RECORD_SERVICE_URL = `http://localhost:${process.env.MEDICAL_RECORD_PORT || 3004}`;
+const PATIENT_SERVICE_URL = `http://patient-service:${process.env.PATIENT_PORT || 3001}`;
+const DOCTOR_SERVICE_URL = `http://doctor-service:${process.env.DOCTOR_PORT || 3002}`;
+const APPOINTMENT_SERVICE_URL = `http://appointment-service:${process.env.APPOINTMENT_PORT || 3003}`;
+const MEDICAL_RECORD_SERVICE_URL = `http://medical-record-service:${process.env.MEDICAL_RECORD_PORT || 3004}`;
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

@@ -1,0 +1,91 @@
+version: "3.8"
+
+services:
+  patient-service:
+    build:
+      context: ./services/patient-service
+    container_name: patient-service
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      - PATIENT_PORT=3001
+      - DOCTOR_PORT=3002
+      - APPOINTMENT_PORT=3003
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+  doctor-service:
+    build:
+      context: ./services/doctor-service
+    container_name: doctor-service
+    ports:
+      - "3002:3002"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      - PATIENT_PORT=3001
+      - DOCTOR_PORT=3002
+      - APPOINTMENT_PORT=3003
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+  appointment-service:
+    build:
+      context: ./services/appointment-service
+    container_name: appointment-service
+    ports:
+      - "3003:3003"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      - PATIENT_PORT=3001
+      - DOCTOR_PORT=3002
+      - APPOINTMENT_PORT=3003
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+  medical-record-service:
+    build:
+      context: ./services/medical-record-service
+    container_name: medical-record-service
+    ports:
+      - "3004:3004"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      - MEDICAL_RECORD_PORT=3004
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      - GATEWAY_PORT=3000
+      - PATIENT_PORT=3001
+      - DOCTOR_PORT=3002
+      - APPOINTMENT_PORT=3003
+      - MEDICAL_RECORD_PORT=3004
+    depends_on:
+      - patient-service
+      - doctor-service
+      - appointment-service
+      - medical-record-service
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+networks:
+  healthcare-network:
+    driver: bridge
