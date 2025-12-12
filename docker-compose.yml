@@ -13,8 +13,6 @@ services:
       - PATIENT_PORT=3001
       - DOCTOR_PORT=3002
       - APPOINTMENT_PORT=3003
-    depends_on:
-      - mongodb
     networks:
       - healthcare-network
     restart: unless-stopped
@@ -31,8 +29,6 @@ services:
       - PATIENT_PORT=3001
       - DOCTOR_PORT=3002
       - APPOINTMENT_PORT=3003
-    depends_on:
-      - mongodb
     networks:
       - healthcare-network
     restart: unless-stopped
@@ -49,8 +45,6 @@ services:
       - PATIENT_PORT=3001
       - DOCTOR_PORT=3002
       - APPOINTMENT_PORT=3003
-    depends_on:
-      - mongodb
     networks:
       - healthcare-network
     restart: unless-stopped
@@ -65,8 +59,6 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - DB_NAME=${DB_NAME}
       - MEDICAL_RECORD_PORT=3004
-    depends_on:
-      - mongodb
     networks:
       - healthcare-network
     restart: unless-stopped
@@ -93,22 +85,6 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
-
-  mongodb:
-    image: mongo:6-alpine
-    container_name: healthcare-mongodb
-    environment:
-      - MONGO_INITDB_DATABASE=${DB_NAME}
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - healthcare-network
-    restart: unless-stopped
-
-volumes:
-  mongodb_data:
 
 networks:
   healthcare-network:
