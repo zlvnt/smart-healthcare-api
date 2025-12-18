@@ -18,9 +18,16 @@
 ## 📌 Ringkasan Project
 
 **Tema:** Smart Healthcare System
-**Requirement:** Minimal 2 layanan yang berkomunikasi via REST API
-**Implementasi:** 4 microservices + API Gateway + Frontend
+**Requirement:** GraphQL Implementation & Docker Deployment
+**Implementasi:**
+- 3 GraphQL microservices (Patient, Doctor, Appointment)
+- 1 REST microservice (Medical Record)
+- API Gateway
+- Frontend integration
+- Docker containerization
+
 **Database:** MongoDB Atlas
+**API Types:** GraphQL (3 services) + REST (1 service)
 
 ---
 
@@ -28,11 +35,13 @@
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Backend Framework** | Node.js + Express | REST API services |
+| **Backend Framework** | Node.js + Express | GraphQL & REST API services |
+| **GraphQL** | express-graphql | GraphQL implementation (3 services) |
 | **Database** | MongoDB Atlas | Cloud database |
 | **Frontend** | HTML + CSS + Vanilla JavaScript | Admin dashboard |
 | **HTTP Client** | Axios | Inter-service communication |
 | **API Documentation** | Swagger UI + swagger-jsdoc | OpenAPI 3.0 documentation |
+| **Containerization** | Docker & Docker Compose | Service deployment & orchestration |
 | **CORS** | cors package | Cross-origin resource sharing |
 
 ---
@@ -105,7 +114,7 @@
 2. Medical Record Service validates:
    ├─→ HTTP GET Patient Service (/patients/:id)
    ├─→ HTTP GET Doctor Service (/doctors/:id)
-   └─→ HTTP GET Appointment Service (/appointments/:id) [optional]
+   └─→ HTTP GET Appointment Service (/appointments/:id)
 3. Jika semua valid → Save medical record
 4. Jika ada yang tidak valid → Return 404 error
 ```
@@ -255,18 +264,84 @@ Body: {
 
 ---
 
+## 🔍 GraphQL Implementation
+
+**3 GraphQL Services:**
+
+### Patient Service (Port 3001)
+```graphql
+Query:
+  - patients: [Patient]
+  - patient(id): Patient
+  - patientByName(name): [Patient]
+
+Mutation:
+  - createPatient(nama, birth_date, gender, phone, ...): Patient
+  - updatePatient(id, ...): Patient
+  - deletePatient(id): Result
+```
+
+### Doctor Service (Port 3002)
+```graphql
+Query:
+  - doctors: [Doctor]
+  - doctor(id): Doctor
+  - doctorBySpecialization(spec): [Doctor]
+
+Mutation:
+  - createDoctor(nama, specialization, phone, ...): Doctor
+  - updateDoctor(id, ...): Doctor
+  - deleteDoctor(id): Result
+```
+
+### Appointment Service (Port 3003)
+```graphql
+Query:
+  - appointments: [Appointment]
+  - appointment(id): Appointment
+  - appointmentByPatient(patientId): [Appointment]
+  - appointmentByDoctor(doctorId): [Appointment]
+
+Mutation:
+  - createAppointment(patient_id, doctor_id, date, complaint): Appointment
+  - updateAppointmentStatus(id, status): Appointment
+  - deleteAppointment(id): Result
+```
+
+**GraphQL Testing:** Open `http://localhost:<PORT>/graphql` untuk GraphQL Playground
+
+---
+
+## 🐳 Docker Implementation
+
+**Services in Containers:**
+- Patient Service (port 3001) - GraphQL
+- Doctor Service (port 3002) - GraphQL
+- Appointment Service (port 3003) - GraphQL
+- Medical Record Service (port 3004) - REST
+- API Gateway (port 3000) - Request routing
+
+**Dockerfiles:** Semua services menggunakan Node.js 18 Alpine
+**Networking:** Services berkomunikasi via container names dalam Docker network
+**Database:** MongoDB Atlas (cloud) - tidak perlu container
+
+---
+
 ## 🎓 Kesimpulan
 
 Project ini mengimplementasikan **microservices architecture** dengan:
 
-1. **4 REST API services** yang independent
-2. **Inter-service communication** via HTTP calls untuk validation
-3. **API Gateway** sebagai central routing
-4. **Complete Swagger documentation** (OpenAPI 3.0)
-5. **Frontend consumer** yang memanggil API Gateway
-6. **JSON format** untuk semua data exchange
+1. **3 GraphQL services** (Patient, Doctor, Appointment) dengan queries & mutations
+2. **1 REST API service** (Medical Record) untuk backward compatibility
+3. **Inter-service communication** via HTTP calls untuk validation
+4. **API Gateway** sebagai central routing untuk GraphQL & REST
+5. **Docker containerization** untuk deployment & orchestration
+6. **Frontend consumer** yang memanggil services via GraphQL & REST
+7. **Complete API documentation** (GraphQL examples + Swagger UI)
 
 **Highlight:**
-- Appointment Service berkomunikasi dengan **2 services** (Patient & Doctor)
+- Appointment Service berkomunikasi dengan **2 services** (Patient & Doctor) untuk validasi
 - Medical Record Service berkomunikasi dengan **3 services** (Patient, Doctor, Appointment)
-- Semua komunikasi menggunakan **HTTP REST API**
+- **GraphQL Playground** tersedia di setiap service untuk testing
+- **Docker networking** memungkinkan inter-service communication via container names
+- **MongoDB Atlas** untuk cloud database management
