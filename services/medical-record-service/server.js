@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 mongoose.connect(process.env.MONGODB_URI, {
-  dbName: process.env.DB_NAME || 'healthcare_db'
+  dbName: 'healthcare_medical_db'
 })
   .then(() => console.log('Medical Record Service connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
