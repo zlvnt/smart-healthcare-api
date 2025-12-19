@@ -14,6 +14,11 @@ const PORT = process.env.APPOINTMENT_PORT || 3003;
 app.use(cors());
 app.use(express.json());
 
+// Redirect root to GraphQL Playground
+app.get('/', (req, res) => {
+  res.redirect('/graphql');
+});
+
 // GraphQL endpoint
 app.use('/graphql', graphqlHTTP({
   schema: schema,
