@@ -211,10 +211,13 @@ Body: {
 
 ## 💾 Database Schema
 
-**Database:** MongoDB Atlas
-**Database Name:** `healthcare_db`
+**Database:** MongoDB Atlas (Dual Database Architecture)
 
-### Collections
+### Database 1: healthcare_db
+
+**Services:** Patient Service, Doctor Service, Appointment Service
+
+### Collections (Database 1)
 
 **patients:**
 ```javascript
@@ -249,18 +252,53 @@ Body: {
 }
 ```
 
+### Database 2: healthcare_medical_db
+
+**Service:** Medical Record Service
+
+### Collections (Database 2)
+
 **medical_records:**
 ```javascript
 {
-  patient_id: String (reference),
-  doctor_id: String (reference),
-  appointment_id: String (reference, optional),
+  patient_id: String (reference to healthcare_db.patients),
+  doctor_id: String (reference to healthcare_db.doctors),
+  appointment_id: String (reference to healthcare_db.appointments, optional),
   diagnosis: String,
   prescription: String,
   notes: String,
   date: Date
 }
 ```
+
+---
+
+## 🔗 Inter-Database Relationships
+
+**Architecture:**
+```
+┌─────────────────────────────────────┐
+│      healthcare_db (MongoDB)        │
+│  ├─ patients                        │
+│  ├─ doctors                         │
+│  └─ appointments                    │
+└────────────────┬────────────────────┘
+                 │
+                 │ Foreign Key References
+                 │
+┌────────────────▼────────────────────┐
+│ healthcare_medical_db (MongoDB)     │
+│  └─ medical_records                 │
+│     ├─ patient_id →                 │
+│     ├─ doctor_id →                  │
+│     └─ appointment_id →             │
+└─────────────────────────────────────┘
+```
+
+**Rationale:**
+- Separation of concerns: Clinical data (Patient, Doctor, Appointment) vs Medical Records
+- Scalability: Medical Records can scale independently
+- Data isolation: Medical Records in separate database for security/performance
 
 ---
 
