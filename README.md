@@ -13,7 +13,9 @@ Microservices-based healthcare management system dengan **GraphQL API** dan **Do
   - Medical Record Service (port 3004) - REST
   - API Gateway (port 3000) - Request forwarding
 
-- **Database:** MongoDB Atlas (cloud)
+- **Database:** MongoDB Atlas (cloud) - Dual Database Architecture
+  - Database 1 (healthcare_db): Patient, Doctor, Appointment
+  - Database 2 (healthcare_medical_db): Medical Records
 - **Frontend:** Vanilla JavaScript + HTML/CSS
 
 ---
